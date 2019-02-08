@@ -15,23 +15,23 @@ from src.model.transformer import TransformerModel
 
 def load_conllu(file):
   with codecs.open(file, 'rb') as f:
-  reader = codecs.getreader('utf-8')(f)
-  buff = []
-  for line in reader:
-    line = line.strip()
-    if line and not line.startswith('#'):
-    if not re.match('[0-9]+[-.][0-9]+', line):
-      buff.append(line.split('\t')[1])
-    elif buff:
-    yield buff
+    reader = codecs.getreader('utf-8')(f)
     buff = []
-  if buff:
-    yield buff
+    for line in reader:
+      line = line.strip()
+      if line and not line.startswith('#'):
+        if not re.match('[0-9]+[-.][0-9]+', line):
+          buff.append(line.split('\t')[1])
+      elif buff:
+        yield buff
+      buff = []
+    if buff:
+      yield buff
     
 def to_raw(sents, file):
   with codecs.open(file, 'w') as fo:
-  for sent in sents:
-    fo.write((" ".join(sent)).encode('utf-8')+'\n')
+    for sent in sents:
+      fo.write((" ".join(sent)).encode('utf-8')+'\n')
 
 def apply_bpe(sents, file, code_file):
   dict={'main':'/users2/yxwang/work/toolkit/XLM/tools/fastBPE/fast','output':bpe_file,
@@ -43,8 +43,8 @@ def apply_bpe(sents, file, code_file):
   os.system(cmd)
   bpe_sents = []
   with open(bpe_file, 'r') as fi:
-  for line in fi.read().strip().split('\n'):
-    bpe_sents.append(line.strip().split(' '))
+    for line in fi.read().strip().split('\n'):
+      bpe_sents.append(line.strip().split(' '))
   assert len(bpe_sents) == len(sents)
   return bpe_sents
 
@@ -169,86 +169,82 @@ def merge(bert_file, merge_file, sents, merge_type='sum'):
   n_tok = 0
   fo = codecs.open(merge_file, 'w')
   with codecs.open(bert_file, 'r') as fin:
-  line = fin.readline()
-  while line:
-    if n % 100 == 0:
-    print ("\r%d" % n, end='')
-    bert = json.loads(line)
-    tokens = []
-    merged = {"linex_index": bert["linex_index"], "features":[]}
-    i = 0
-    while i < len(bert["features"]):
-    item = bert["features"][i]
-    if item["token"]=="[CLS]" or item["token"]=="[SEP]":
-      merged["features"].append(item)
-    elif item["token"].startswith("##") and not (len(merged["features"])-1<len(sents[n]) and item["token"] == sents[n][len(merged["features"])-1]):
-      tmp_layers = []
-      for j, layer in enumerate(merged["features"][-1]["layers"]):
-      #merged["features"][-1]["layers"][j]["values"] = list(np.array(layer["values"]) + np.array(item["layers"][j]["values"]))
-      # j-th layer
-      tmp_layers.append([np.array(layer["values"])])
-      tmp_layers[j].append(np.array(item["layers"][j]["values"]))
-
-      item = bert["features"][i+1]
-      while item["token"].startswith("##") and not (len(merged["features"])-1<len(sents[n]) and item["token"] == sents[n][len(merged["features"])-1]):
-      for j, layer in enumerate(merged["features"][-1]["layers"]):
-        # j-th layer
-        tmp_layers[j].append(np.array(item["layers"][j]["values"]))
-      i += 1
-      item = bert["features"][i+1]
-      for j, layer in enumerate(merged["features"][-1]["layers"]):
-      if merge_type == 'sum':
-        merged["features"][-1]["layers"][j]["values"] = list(np.sum(tmp_layers[j], 0))
-      if merge_type == 'avg':
-        merged["features"][-1]["layers"][j]["values"] = list(np.mean(tmp_layers[j], 0))
-      if merge_type == 'first':
-        merged["features"][-1]["layers"][j]["values"] = list(tmp_layers[j][0])
-      if merge_type == 'last':
-        merged["features"][-1]["layers"][j]["values"] = list(tmp_layers[j][-1])
-      if merge_type == 'mid':
-        mid = int(len(tmp_layers[j]) / 2)
-        merged["features"][-1]["layers"][j]["values"] = list(tmp_layers[j][mid])
-      if len(sents[n]) < len(merged["features"]) - 1:
-      print (sents[n], len(merged["features"]))
-      else:
-      merged["features"][-1]["token"] = sents[n][len(merged["features"])-2].lower()
-    elif item["token"] == "[UNK]":
-      n_unk += 1
-      merged["features"].append(item)
-      if len(sents[n]) < len(merged["features"]) - 1:
-      print (sents[n], len(merged["features"]))
-      else:
-      merged["features"][-1]["token"] = sents[n][len(merged["features"])-2].lower()
-    else:
-      merged["features"].append(item)
-    i += 1
-    try:
-    assert len(merged["features"]) == len(sents[n]) + 2
-    except:
-    orig = [m["token"] for m in merged["features"]]
-    print ('\n',len(merged["features"]), len(sents[n]))
-    print (sents[n], '\n', orig)
-    print (zip(sents[n], orig[1:-1]))
-    raise ValueError("Sentence-{}:{}".format(n, ' '.join(sents[n])))
-    for i in range(len(sents[n])):
-    try:
-      assert sents[n][i].lower() == merged["features"][i+1]["token"]
-    except:
-      print ('wrong word id:{}, word:{}'.format(i, sents[n][i]))
-
-    n_tok += len(sents[n])
-    fo.write(json.dumps(merged)+"\n")
     line = fin.readline()
-    n += 1
-  print ('Total tokens:{}, UNK tokens:{}'.format(n_tok, n_unk))
-  info_file=os.path.dirname(merge_file) + '/README.txt'
-  print (info_file)
-  with open(info_file, 'a') as info:
-    info.write('File:{}\nTotal tokens:{}, UNK tokens:{}\n\n'.format(merge_file, n_tok, n_unk))
+    while line:
+      if n % 100 == 0:
+        print ("\r%d" % n, end='')
+      bert = json.loads(line)
+      tokens = []
+      merged = {"linex_index": bert["linex_index"], "features":[]}
+      i = 0
+      while i < len(bert["features"]):
+        item = bert["features"][i]
+        if item["token"]=="[CLS]" or item["token"]=="[SEP]":
+          merged["features"].append(item)
+        elif item["token"].startswith("##") and not (len(merged["features"])-1<len(sents[n]) and item["token"] == sents[n][len(merged["features"])-1]):
+          tmp_layers = []
+          for j, layer in enumerate(merged["features"][-1]["layers"]):
+            #merged["features"][-1]["layers"][j]["values"] = list(np.array(layer["values"]) + np.array(item["layers"][j]["values"]))
+            # j-th layer
+            tmp_layers.append([np.array(layer["values"])])
+            tmp_layers[j].append(np.array(item["layers"][j]["values"]))
 
-#if len(sys.argv) < 7:
-#  print ("usage:%s [map_model] [bert_model] [layer(-1)] [conllu file] [output bert] [merged bert]" % sys.argv[0])
-#  exit(1)
+          item = bert["features"][i+1]
+          while item["token"].startswith("##") and not (len(merged["features"])-1<len(sents[n]) and item["token"] == sents[n][len(merged["features"])-1]):
+            for j, layer in enumerate(merged["features"][-1]["layers"]):
+              # j-th layer
+              tmp_layers[j].append(np.array(item["layers"][j]["values"]))
+            i += 1
+            item = bert["features"][i+1]
+          for j, layer in enumerate(merged["features"][-1]["layers"]):
+            if merge_type == 'sum':
+              merged["features"][-1]["layers"][j]["values"] = list(np.sum(tmp_layers[j], 0))
+            if merge_type == 'avg':
+              merged["features"][-1]["layers"][j]["values"] = list(np.mean(tmp_layers[j], 0))
+            if merge_type == 'first':
+              merged["features"][-1]["layers"][j]["values"] = list(tmp_layers[j][0])
+            if merge_type == 'last':
+              merged["features"][-1]["layers"][j]["values"] = list(tmp_layers[j][-1])
+            if merge_type == 'mid':
+              mid = int(len(tmp_layers[j]) / 2)
+              merged["features"][-1]["layers"][j]["values"] = list(tmp_layers[j][mid])
+          if len(sents[n]) < len(merged["features"]) - 1:
+            print (sents[n], len(merged["features"]))
+          else:
+            merged["features"][-1]["token"] = sents[n][len(merged["features"])-2].lower()
+        elif item["token"] == "[UNK]":
+          n_unk += 1
+          merged["features"].append(item)
+          if len(sents[n]) < len(merged["features"]) - 1:
+            print (sents[n], len(merged["features"]))
+          else:
+            merged["features"][-1]["token"] = sents[n][len(merged["features"])-2].lower()
+        else:
+          merged["features"].append(item)
+        i += 1
+      try:
+        assert len(merged["features"]) == len(sents[n]) + 2
+      except:
+        orig = [m["token"] for m in merged["features"]]
+        print ('\n',len(merged["features"]), len(sents[n]))
+        print (sents[n], '\n', orig)
+        print (zip(sents[n], orig[1:-1]))
+        raise ValueError("Sentence-{}:{}".format(n, ' '.join(sents[n])))
+      for i in range(len(sents[n])):
+        try:
+          assert sents[n][i].lower() == merged["features"][i+1]["token"]
+        except:
+          print ('wrong word id:{}, word:{}'.format(i, sents[n][i]))
+
+      n_tok += len(sents[n])
+      fo.write(json.dumps(merged)+"\n")
+      line = fin.readline()
+      n += 1
+    print ('Total tokens:{}, UNK tokens:{}'.format(n_tok, n_unk))
+    info_file=os.path.dirname(merge_file) + '/README.txt'
+    print (info_file)
+    with open(info_file, 'a') as info:
+      info.write('File:{}\nTotal tokens:{}, UNK tokens:{}\n\n'.format(merge_file, n_tok, n_unk))
 
 parser = argparse.ArgumentParser(description='CoNLLU to BERT')
 parser.add_argument("--codes", type=str, default=None, help="bert vocab")
