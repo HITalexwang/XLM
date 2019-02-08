@@ -9,9 +9,6 @@ reloaded = torch.load(model_path)
 params = AttrDict(reloaded['params'])
 print("Supported languages: %s" % ", ".join(params.lang2id.keys()))
 
-print (reloaded['dico_id2word'])
-exit()
-
 # build dictionary / update parameters,
 dico = Dictionary(reloaded['dico_id2word'], reloaded['dico_word2id'], reloaded['dico_counts'])
 params.n_words = len(dico)
