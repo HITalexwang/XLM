@@ -168,10 +168,13 @@ def sent2bert(sents, model_path, lang, bert_file, batch_size=16):
         unique_id += 1
 
 def merge(bert_file, merge_file, sents, merge_type='sum'):
+  merge_file = merge_file + '.' + merge_type
   n = 0
   n_unk = 0
   n_tok = 0
   fo = codecs.open(merge_file, 'w')
+  assert merge_type is not None
+  print ("Merge Type: {}".format(merge_type))
   with codecs.open(bert_file, 'r') as fin:
     line = fin.readline()
     while line:
@@ -217,7 +220,7 @@ def merge(bert_file, merge_file, sents, merge_type='sum'):
             print (sents[n], len(merged["features"]))
           else:
             merged["features"][-1]["token"] = sents[n][len(merged["features"])-2].lower()
-        elif item["token"] == "[UNK]":
+        elif item["token"] == "<unk>":
           n_unk += 1
           merged["features"].append(item)
           if len(sents[n]) < len(merged["features"]) - 1:
@@ -273,4 +276,6 @@ bpe_sents = apply_bpe(sents, args.bpe_file, args.codes)
 
 sent2bert(bpe_sents, args.model, args.lang, args.bert_file, batch_size=args.batch)
 
-merge(args.bert_file, args.merge_file, sents, merge_type=args.merge_type)
+merge_types = args.merge_type.strip().split(',')
+for merge_type in merge_types:
+  merge(args.bert_file, args.merge_file, sents, merge_type=args.merge_type)
