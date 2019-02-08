@@ -8,6 +8,8 @@ import re
 import numpy as np
 import json
 import argparse
+import torch
+import collections
 
 from src.utils import AttrDict
 from src.data.dictionary import Dictionary, BOS_WORD, EOS_WORD, PAD_WORD, UNK_WORD, MASK_WORD
@@ -18,26 +20,28 @@ def load_conllu(file):
     reader = codecs.getreader('utf-8')(f)
     buff = []
     for line in reader:
-      line = line.strip()
+      line = line.strip().lower()
       if line and not line.startswith('#'):
         if not re.match('[0-9]+[-.][0-9]+', line):
           buff.append(line.split('\t')[1])
       elif buff:
         yield buff
-      buff = []
+        buff = []
     if buff:
       yield buff
     
 def to_raw(sents, file):
   with codecs.open(file, 'w') as fo:
     for sent in sents:
-      fo.write((" ".join(sent)).encode('utf-8')+'\n')
+      fo.write(" ".join(sent)+'\n')
 
 def apply_bpe(sents, file, code_file):
+  bpe_file = file + '.bpe'
   dict={'main':'/users2/yxwang/work/toolkit/XLM/tools/fastBPE/fast','output':bpe_file,
     'input':file,'codes':code_file}
+  print (len(sents))
   to_raw(sents, file)
-  bpe_file = file + '.bpe'
+  
   cmd = '{main} applybpe {output} {input} {codes}'.format(**dict)
   print (cmd)
   os.system(cmd)
@@ -117,7 +121,7 @@ def sent2bert(sents, model_path, lang, bert_file, batch_size=16):
   model.eval()
 
   unique_id = 0
-  with open(args.output_file, "w", encoding='utf-8') as writer:
+  with open(bert_file, "w", encoding='utf-8') as writer:
     for i in range(0, len(sents), batch_size):
       if i + batch_size < len(sents):
         sentences = sents[i:i+batch_size]
@@ -266,7 +270,6 @@ print ("Total {} Sentences".format(len(sents)))
 
 bpe_sents = apply_bpe(sents, args.bpe_file, args.codes)
 
-
-#sent2bert()
+sent2bert(sents, args.model, args.lang, args.bert_file, batch_size=args.batch)
 
 #merge(args.bert_file, args.merge_file, sents, merge_type=args.merge_type)
