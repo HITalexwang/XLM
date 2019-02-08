@@ -278,4 +278,4 @@ sent2bert(bpe_sents, args.model, args.lang, args.bert_file, batch_size=args.batc
 
 merge_types = args.merge_type.strip().split(',')
 for merge_type in merge_types:
-  merge(args.bert_file, args.merge_file, sents, merge_type=args.merge_type)
+  merge(args.bert_file, args.merge_file, sents, merge_type=merge_type)
