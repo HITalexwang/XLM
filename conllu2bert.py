@@ -183,35 +183,36 @@ def merge(bert_file, merge_file, sents, merge_type='sum'):
       i = 0
       while i < len(bert["features"]):
         item = bert["features"][i]
-        if item["token"]=="[CLS]" or item["token"]=="[SEP]":
+        if item["token"]=="</s>":
           merged["features"].append(item)
-        elif item["token"].startswith("##") and not (len(merged["features"])-1<len(sents[n]) and item["token"] == sents[n][len(merged["features"])-1]):
+        elif item["token"].endswith("@@") and not (len(merged["features"])-1<len(sents[n]) and item["token"] == sents[n][len(merged["features"])-1]):
           tmp_layers = []
-          for j, layer in enumerate(merged["features"][-1]["layers"]):
-            #merged["features"][-1]["layers"][j]["values"] = list(np.array(layer["values"]) + np.array(item["layers"][j]["values"]))
-            # j-th layer
-            tmp_layers.append([np.array(layer["values"])])
-            tmp_layers[j].append(np.array(item["layers"][j]["values"]))
+          tmp_layers.append(np.array(item["layers"][0]["values"]))
 
           item = bert["features"][i+1]
-          while item["token"].startswith("##") and not (len(merged["features"])-1<len(sents[n]) and item["token"] == sents[n][len(merged["features"])-1]):
-            for j, layer in enumerate(merged["features"][-1]["layers"]):
-              # j-th layer
-              tmp_layers[j].append(np.array(item["layers"][j]["values"]))
+          while item["token"].endswith("@@") and not (len(merged["features"])-1<len(sents[n]) and item["token"] == sents[n][len(merged["features"])-1]):
+            tmp_layers.append(np.array(item["layers"][0]["values"]))
             i += 1
             item = bert["features"][i+1]
-          for j, layer in enumerate(merged["features"][-1]["layers"]):
-            if merge_type == 'sum':
-              merged["features"][-1]["layers"][j]["values"] = list(np.sum(tmp_layers[j], 0))
-            if merge_type == 'avg':
-              merged["features"][-1]["layers"][j]["values"] = list(np.mean(tmp_layers[j], 0))
-            if merge_type == 'first':
-              merged["features"][-1]["layers"][j]["values"] = list(tmp_layers[j][0])
-            if merge_type == 'last':
-              merged["features"][-1]["layers"][j]["values"] = list(tmp_layers[j][-1])
-            if merge_type == 'mid':
-              mid = int(len(tmp_layers[j]) / 2)
-              merged["features"][-1]["layers"][j]["values"] = list(tmp_layers[j][mid])
+          # add the first token not end with '@@'
+          i += 1
+          item = bert["features"][i]
+          tmp_layers.append(np.array(item["layers"][0]["values"]))
+
+          # append the first token not end with '@@', then edit its values and token
+          merged["features"].append(item)
+          if merge_type == 'sum':
+            merged["features"][-1]["layers"][0]["values"] = list(np.sum(tmp_layers, 0))
+          elif merge_type == 'avg':
+            merged["features"][-1]["layers"][0]["values"] = list(np.mean(tmp_layers, 0))
+          elif merge_type == 'first':
+            merged["features"][-1]["layers"][0]["values"] = list(tmp_layers[0])
+          elif merge_type == 'last':
+            merged["features"][-1]["layers"][0]["values"] = list(tmp_layers[-1])
+          elif merge_type == 'mid':
+            mid = int(len(tmp_layers) / 2)
+            merged["features"][-1]["layers"][0]["values"] = list(tmp_layers[mid])
+
           if len(sents[n]) < len(merged["features"]) - 1:
             print (sents[n], len(merged["features"]))
           else:
@@ -270,6 +271,6 @@ print ("Total {} Sentences".format(len(sents)))
 
 bpe_sents = apply_bpe(sents, args.bpe_file, args.codes)
 
-sent2bert(sents, args.model, args.lang, args.bert_file, batch_size=args.batch)
+sent2bert(bpe_sents, args.model, args.lang, args.bert_file, batch_size=args.batch)
 
-#merge(args.bert_file, args.merge_file, sents, merge_type=args.merge_type)
+merge(args.bert_file, args.merge_file, sents, merge_type=args.merge_type)
