@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import sys, os
 import codecs
+import copy
 import re
 import numpy as np
 import json
@@ -33,7 +34,13 @@ def load_conllu(file):
 def to_raw(sents, file):
   with codecs.open(file, 'w') as fo:
     for sent in sents:
-      fo.write(" ".join(sent)+'\n')
+      sent_ = copy.deepcopy(sent)
+      for i in range(len(sent_)):
+        if sent_[i].find(' ') > -1:
+          rpl = sent_[i].replace(' ', '-')
+          print ("### Replace {} with {} ###".format(sent_[i], rpl))
+          sent_[i] = rpl
+      fo.write(" ".join(sent_)+'\n')
 
 def apply_bpe(sents, file, code_file):
   bpe_file = file + '.bpe'
@@ -47,8 +54,9 @@ def apply_bpe(sents, file, code_file):
   os.system(cmd)
   bpe_sents = []
   with open(bpe_file, 'r') as fi:
-    for line in fi.read().strip().split('\n'):
-      bpe_sents.append(line.strip().split(' '))
+    for i, line in enumerate(fi.read().strip().split('\n')):
+      sent = line.strip().split(' ')
+      bpe_sents.append(sent)
   assert len(bpe_sents) == len(sents)
   return bpe_sents
 
